@@ -1,11 +1,22 @@
-import { Controller, Post, Get, Patch, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  Headers,
+} from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
-import type { Announcement } from './announcement.model';
+import type { Announcement, Comment, ReactionType } from './announcement.model';
 
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
+  // ---------------- Announcements ----------------
   @Post()
   create(
     @Body('title') title: string,
@@ -15,7 +26,7 @@ export class AnnouncementsController {
   }
 
   @Get()
-  findAll(): Announcement[] {
+  findAll(): any[] {
     return this.announcementsService.findAll();
   }
 
@@ -25,5 +36,48 @@ export class AnnouncementsController {
     @Body('status') status: 'active' | 'closed',
   ): Announcement | undefined {
     return this.announcementsService.updateStatus(+id, status);
+  }
+
+  // ---------------- Comments ----------------
+  @Post(':id/comments')
+  addComment(
+    @Param('id') id: string,
+    @Body('authorName') authorName: string,
+    @Body('text') text: string,
+  ): Comment {
+    return this.announcementsService.addComment(+id, { authorName, text });
+  }
+
+  @Get(':id/comments')
+  getComments(
+    @Param('id') id: string,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit = 10,
+  ) {
+    return this.announcementsService.getComments(+id, cursor, limit);
+  }
+
+  // ---------------- Reactions ----------------
+  @Post(':id/reactions')
+  addReaction(
+    @Param('id') id: string,
+    @Body('type') type: ReactionType,
+    @Headers('idempotency-key') idempotencyKey: string,
+    @Headers('x-user-id') userId: string,
+  ) {
+    return this.announcementsService.addReaction(
+      +id,
+      type,
+      userId,
+      idempotencyKey,
+    );
+  }
+
+  @Delete(':id/reactions')
+  removeReaction(
+    @Param('id') id: string,
+    @Headers('x-user-id') userId: string,
+  ) {
+    return this.announcementsService.removeReaction(+id, userId);
   }
 }
